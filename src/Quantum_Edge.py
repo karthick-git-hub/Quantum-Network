@@ -1,3 +1,6 @@
+import json
+from json import JSONEncoder
+
 from global_variables import *
 
 class Edge():
@@ -61,3 +64,13 @@ class Edge():
     
     def show_all(self):
         return str(self._edge_id) + ' '+ str(self._line_id) + ' '+ str(self._type) + ' '+str(self._position)+ ' '+str(self._status)
+
+    def to_json(self):
+        '''
+        convert the instance of this class to json
+        '''
+        return json.dumps(self, indent=4, default=lambda o: o.__dict__)
+
+class QuantumEdgeEncoder(JSONEncoder):
+    def default(self, o):
+        return o.__dict__

@@ -1,14 +1,16 @@
+import json
 from tkinter import *
 from operator import add
 import numpy as np
 import os
 import time
 from Quantum_Node import Node
-from Quantum_Edge import Edge
+from Quantum_Edge import Edge, QuantumEdgeEncoder
 from Drag_and_drop_manager import DragManager
 from global_variables import *
 from PIL import Image,ImageTk
 from src.Utils import start, setGlobalValues, periodic_update
+from src.dto.dto import insert, select
 
 
 class Quantum_Network():
@@ -50,6 +52,8 @@ class Quantum_Network():
         start_transition_btn.grid(row=2, column=0, pady=10)
         reset_btn.grid(row=2, column=1)
         self.switch_mode_btn.grid(row=3, column=0)
+        replay_btn = Button(self.right_frame,text = 'Replay', command = self.replay)
+        replay_btn.grid(row=4,column=1)
         self.window.mainloop()
     
     def get_mode(self):
@@ -97,6 +101,7 @@ class Quantum_Network():
     def transition(self):
         global gate_count, gate_order, channel_order, channel_count
         self.end_selection()
+        json_String = self.convertToJson(self.edge_list)
         for i in range(len(self.edge_list)):
             channel_count = 0
             setGlobalValues(channel_order, channel_count, self.window)
@@ -108,7 +113,6 @@ class Quantum_Network():
                 end_ball_coords = ball_coords
                 ball_coords = [edge_coords[2],edge_coords[3]]
             ball = self.canvas.create_oval(ball_coords[0],ball_coords[1],ball_coords[0],ball_coords[1], fill=qbit_color, outline=qbit_color, width=10)
-            #print(end_ball_coords, ball_coords, start_node)
             ydiff = end_ball_coords[1] - ball_coords[1]
             xdiff = end_ball_coords[0] - ball_coords[0]
             xdiff = 0.1 if xdiff == 0 else xdiff
@@ -137,6 +141,21 @@ class Quantum_Network():
                 self.canvas.move(ball,xinc,yinc)
                 self.canvas.update()
             self.canvas.delete(ball)
+        insert(json_String)
+
+    def replay(self):
+        print("in replay")
+        rows = select("1")
+        print(rows)
+        results = json.loads((rows[0])[0])
+        print(len(results))
+        self.edge_list = []
+        for result in results:
+            edge = Edge(id=result['_edge_id'], line_id=result['_line_id'], line_id2=result['_line_id2'],
+                                 type=result['_type'], position=result['_position'], status=result['_status'],
+                                 nodes=result['_nodes'])
+            self.edge_list.append(edge)
+        print(self.edge_list)
 
     def setup_board(self):
         self.edge_list =[]
@@ -256,6 +275,16 @@ class Quantum_Network():
             event_position = [event.x, event.y]
             clicked_node = self.convert_grid_to_logical_position(event_position)
             self.update_nodes(clicked_node)
+
+    def convertToJson(self, edge_list):
+        json_String = "["
+        for i in edge_list:
+            json_String = json_String + i.to_json()
+            json_String = json_String + ","
+        json_String = json_String[:-1] + "]"
+        print(json_String)
+        return json_String
+
 
 game_instance = Quantum_Network()
 game_instance.mainloop()
