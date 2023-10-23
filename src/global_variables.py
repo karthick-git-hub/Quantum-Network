@@ -20,3 +20,4 @@ rearrange = 'rearrange_mode'
 channel_order = ["xgate", "ugate", "igate", "hgate"]
 channel_count = 0
 parent_node = False
+replay_option = "False"

@@ -7,31 +7,37 @@ def setup():
     # Create a cursor
     cursor = conn.cursor()
 
-    # Create a table
+    # Create a tablex
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS replay (
             id INTEGER PRIMARY KEY,
-            nodeTraversal TEXT
+            nodeTraversal TEXT,
+            ksuid CHAR(100) NOT NULL
         )
     ''')
     return conn
 
-def insert(nodeTraversal):
+def insert(nodeTraversal, ksu_id):
     # Insert values into the table
     conn = setup()
     cursor = conn.cursor()
-    cursor.execute('INSERT INTO replay (id, nodeTraversal) VALUES (?, ?)', (1, nodeTraversal))
+    rows = select(ksu_id);
+    if(len(rows) > 0):
+        query = 'Update replay set nodeTraversal =?  where ksuid = ?'
+        cursor.execute(query, (nodeTraversal, ksu_id))
+    else:
+        cursor.execute('INSERT INTO replay (nodeTraversal, ksuid) VALUES (?, ?)', (nodeTraversal, ksu_id))
     conn.commit()
 
     # Close the connection
     conn.close()
 
 
-def select(id):
+def select(ksu_id):
     conn = setup()
     cursor = conn.cursor()
-
-    cursor.execute('SELECT nodeTraversal FROM replay where id =' + id)
+    query = 'SELECT nodeTraversal FROM replay where ksuid =?'
+    cursor.execute(query, [ksu_id])
     rows = cursor.fetchall()
 
     # Close the connection

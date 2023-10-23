@@ -19,12 +19,20 @@ class Quantum_Network():
         self.window.title('Quantum Key Distribution Network') 
         self.canvas_size = size_of_board
         self.mode = transmission
-        
+
+        self.window.state('zoomed')
+
+       
+
         # Create left and right frames
-        self.left_frame = Frame(self.window, width= self.canvas_size+20, height=self.canvas_size+20)
+
+        self.left_frame = Frame(self.window, width= self.canvas_size+500, height=self.canvas_size+100)
+
         self.left_frame.grid(row=0, column=0, padx=10, pady=10)
-        self.right_frame = Frame(self.window, width=200, height=400)
-        self.right_frame.grid(row=0, column=1, padx=10, pady=5)
+
+        self.right_frame = Frame(self.window, width=self.canvas_size+500, height=200)
+
+        self.right_frame.grid(row=1, column=0, padx=10, pady=10, sticky='W')
 
         self.canvas = Canvas(self.left_frame, width=self.canvas_size+500, height=self.canvas_size+100)
         self.canvas.pack(fill = "both", expand = True)
@@ -35,25 +43,58 @@ class Quantum_Network():
         #self.canvas.bind('<Button-1>', self.click)
         #self.canvas.bind('<Double-Button-1>', self.doubleclick)
 
+        left_buttons_frame = Frame(self.right_frame)
+
+        left_buttons_frame.grid(column=0, row=0, sticky="NW")
+
+        right_buttons_frame = Frame(self.right_frame)
+
+        right_buttons_frame.grid(column=1, row=0, sticky="NE")
+
+        self.ksu_id_var=StringVar()
+
         self.name_var=IntVar()
         self.name_var.set(5)
         self.setup_board()
         
         self.switch_btn_text = 'Switch to arrangement mode'
-        self.switch_mode_btn = Button(self.right_frame,text = self.switch_btn_text, command = self.switch_mode)
-        name_label = Label(self.right_frame, text = 'Enter the grid size')
-        name_entry = Entry(self.right_frame,textvariable = self.name_var)
-        sub_btn=Button(self.right_frame,text = 'Submit', command = self.submit)
-        start_transition_btn = Button(self.right_frame,text = 'Start transition', command = self.transition)
-        reset_btn = Button(self.right_frame,text = 'Reset', command = self.reset)
-        name_label.grid(row=0,column=0)
-        name_entry.grid(row=1,column=0)
-        sub_btn.grid(row=1,column=1, padx= 5)
-        start_transition_btn.grid(row=2, column=0, pady=10)
-        reset_btn.grid(row=2, column=1)
-        self.switch_mode_btn.grid(row=3, column=0)
-        replay_btn = Button(self.right_frame,text = 'Replay', command = self.replay)
-        replay_btn.grid(row=4,column=1)
+
+        self.switch_mode_btn = Button(left_buttons_frame,text = self.switch_btn_text, command = self.switch_mode)
+
+        name_label = Label(left_buttons_frame, text = 'Enter the grid size:')
+
+        name_entry = Entry(left_buttons_frame,textvariable = self.name_var)
+
+        sub_btn=Button(left_buttons_frame,text = 'Submit', command = self.submit)
+
+        start_transition_btn = Button(right_buttons_frame,text = 'Start transition', command = self.transition)
+
+        reset_btn = Button(right_buttons_frame,text = 'Reset', command = self.reset)
+
+        name_label.grid(row=0,column=0, padx=5, sticky='W')
+
+        name_entry.grid(row=0,column=1, padx=5, sticky='W')
+
+        sub_btn.grid(row=0,column=2, padx= 5, sticky='W')
+
+        start_transition_btn.grid(row=0, column=3, padx=5, sticky='E')
+
+        reset_btn.grid(row=0, column=4, padx=5, sticky='E')
+
+        self.switch_mode_btn.grid(row=1, column=0, padx=5,sticky='W')
+
+        replay_btn = Button(right_buttons_frame,text = 'Replay', command = self.replay)
+
+        replay_btn.grid(row=1,column=4, padx=5, sticky='E')
+
+        ksu_id_label = Label(left_buttons_frame, text = 'Give the KSU ID:')
+
+        ksu_id_entry = Entry(left_buttons_frame,textvariable = self.ksu_id_var)
+
+        ksu_id_label.grid(row=3, column=1, padx=5, sticky='W')
+
+        ksu_id_entry.grid(row=3, column=2, padx=5, sticky='W')
+
         self.window.mainloop()
     
     def get_mode(self):
@@ -99,9 +140,13 @@ class Quantum_Network():
         [x.color != dot_selected_color and self.update_node_color(x, dot_disable_color) for x in self.node_list]
 
     def transition(self):
-        global gate_count, gate_order, channel_order, channel_count
+        global gate_count, gate_order, channel_order, channel_count, replay_option
         self.end_selection()
         json_String = self.convertToJson(self.edge_list)
+        print(json_String)
+        print(self.edge_list)
+        print(self.ksu_id_var.get())
+
         for i in range(len(self.edge_list)):
             channel_count = 0
             setGlobalValues(channel_order, channel_count, self.window)
@@ -141,21 +186,26 @@ class Quantum_Network():
                 self.canvas.move(ball,xinc,yinc)
                 self.canvas.update()
             self.canvas.delete(ball)
-        insert(json_String)
+        if(replay_option != "True"):
+            insert(json_String, self.ksu_id_var.get())
 
     def replay(self):
-        print("in replay")
-        rows = select("1")
+        global replay_option
+        replay_option = "True"
+        rows = select(self.ksu_id_var.get())
         print(rows)
         results = json.loads((rows[0])[0])
         print(len(results))
         self.edge_list = []
         for result in results:
-            edge = Edge(id=result['_edge_id'], line_id=result['_line_id'], line_id2=result['_line_id2'],
-                                 type=result['_type'], position=result['_position'], status=result['_status'],
-                                 nodes=result['_nodes'])
-            self.edge_list.append(edge)
+            nodes = result['_nodes']
+            start_node = next(x for x in self.node_list if x.id == nodes[1])
+            end_node = next(x for x in self.node_list if x.id == nodes[0])
+            self.make_edge_between_nodes(start_node, end_node)
+            # self.edge_list.append(edge)
         print(self.edge_list)
+        start(self.window)
+        self.transition()
 
     def setup_board(self):
         self.edge_list =[]
@@ -282,7 +332,6 @@ class Quantum_Network():
             json_String = json_String + i.to_json()
             json_String = json_String + ","
         json_String = json_String[:-1] + "]"
-        print(json_String)
         return json_String
 
 
