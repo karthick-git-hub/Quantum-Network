@@ -23,7 +23,7 @@ class DragManager():
     def on_drag(self, event):
         # you could use this method to move a floating window that
         # represents what you're dragging
-        print('ffff',self.get_mode())
+        # print('ffff',self.get_mode())
         if self.get_mode() == rearrange:
             sx, sy, ex, ey = self.canvas.coords(self.node_id)
             print(self.node.connections)

@@ -10,7 +10,7 @@ from Drag_and_drop_manager import DragManager
 from global_variables import *
 from PIL import Image,ImageTk
 from src.Utils import start, setGlobalValues, periodic_update
-from src.dto.dto import insert, select
+from src.dto.dto import insert, select, fetchallRows
 
 
 class Quantum_Network():
@@ -67,7 +67,7 @@ class Quantum_Network():
 
         sub_btn=Button(left_buttons_frame,text = 'Submit', command = self.submit)
 
-        start_transition_btn = Button(right_buttons_frame,text = 'Start transition', command = self.transition)
+        start_transition_btn = Button(right_buttons_frame,text = 'Start transition', command = self.callTransitionButtonClick)
 
         reset_btn = Button(right_buttons_frame,text = 'Reset', command = self.reset)
 
@@ -94,6 +94,10 @@ class Quantum_Network():
         ksu_id_label.grid(row=3, column=1, padx=5, sticky='W')
 
         ksu_id_entry.grid(row=3, column=2, padx=5, sticky='W')
+
+        back_btn = Button(right_buttons_frame,text = 'Back', command = self.back)
+
+        back_btn.grid(row=3,column=5, padx=5, sticky='E')
 
         self.window.mainloop()
     
@@ -139,17 +143,37 @@ class Quantum_Network():
         self.update_node_color(end_node, dot_selected_color)
         [x.color != dot_selected_color and self.update_node_color(x, dot_disable_color) for x in self.node_list]
 
+    def callTransitionButtonClick(self):
+        global replay_option
+        replay_option = "Click_Button"
+        self.transition()
+
+    def callTransitionFromReplay(self):
+        global replay_option
+        replay_option = "Replay"
+        self.transition()
+
+    def callTransitionFromBack(self):
+        global replay_option
+        replay_option = "Back"
+        self.transition()
+
     def transition(self):
         global gate_count, gate_order, channel_order, channel_count, replay_option
         self.end_selection()
         json_String = self.convertToJson(self.edge_list)
-        print(json_String)
-        print(self.edge_list)
-        print(self.ksu_id_var.get())
+        # print(json_String)
+        # print(self.edge_list)
+        # print(self.ksu_id_var.get())
 
         for i in range(len(self.edge_list)):
             channel_count = 0
-            setGlobalValues(channel_order, channel_count, self.window)
+            if replay_option == "Back":
+                channel_order_temp = channel_order[::-1]
+
+            else:
+                channel_order_temp = channel_order
+            setGlobalValues(channel_order_temp, channel_count, self.window)
             edge_coords = self.canvas.coords(self.edge_list[i].line_id)
             ball_coords = [edge_coords[0], edge_coords[1]]
             end_ball_coords = [edge_coords[2], edge_coords[3]]
@@ -182,30 +206,46 @@ class Quantum_Network():
                     ball_coords[1] -= yinc
                     yinc =  end_ball_coords[1]-ball_coords[1]
                     ball_coords[1] = end_ball_coords[1]
-                print(ball_coords, xinc, yinc)
+                # print(ball_coords, xinc, yinc)
                 self.canvas.move(ball,xinc,yinc)
                 self.canvas.update()
             self.canvas.delete(ball)
-        if(replay_option != "True"):
+        if(replay_option == "Click_Button"):
             insert(json_String, self.ksu_id_var.get())
 
     def replay(self):
         global replay_option
-        replay_option = "True"
+        replay_option = "Replay"
         rows = select(self.ksu_id_var.get())
-        print(rows)
+        # print(rows)
         results = json.loads((rows[0])[0])
-        print(len(results))
+        # print(len(results))
         self.edge_list = []
+        self.edge_list_temp = []
         for result in results:
             nodes = result['_nodes']
             start_node = next(x for x in self.node_list if x.id == nodes[1])
             end_node = next(x for x in self.node_list if x.id == nodes[0])
             self.make_edge_between_nodes(start_node, end_node)
-            # self.edge_list.append(edge)
-        print(self.edge_list)
+        # print(self.edge_list)
         start(self.window)
-        self.transition()
+        self.callTransitionFromReplay()
+
+    def back(self):
+        print(self.edge_list)
+        self.edge_list_temp = self.edge_list
+        if(len(self.edge_list) > 0):
+            result = self.edge_list[len(self.edge_list) - 1]
+            self.edge_list = []
+            if(isinstance(result, Edge)):
+                nodes = result.nodes
+            print(nodes)
+            start_node = next(x for x in self.node_list if x.id == nodes[0])
+            end_node = next(x for x in self.node_list if x.id == nodes[1])
+            self.make_edge_between_nodes(start_node, end_node)
+            self.callTransitionFromBack()
+        self.edge_list = self.edge_list_temp
+
 
     def setup_board(self):
         self.edge_list =[]
